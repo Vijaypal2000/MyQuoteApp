@@ -1,20 +1,212 @@
-import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import {
+  View,
+  Text,
+  Image,
+  TouchableOpacity,
+  StyleSheet,
+  StatusBar,
+  ImageBackground,
+  ActivityIndicator,
+} from 'react-native';
+import { captureRef } from 'react-native-view-shot';
+import * as Sharing from 'expo-sharing'; 
+import Logo from './components/logo';
+import bgimg from "../MyQuoteApp/assets/images/homescreen.png";
 
-export default function App() {
+export default function App() { 
+  const viewShotRef = useRef(null);
+  const [capturedImage, setCapturedImage] = useState(null);
+  const [quotes, setQuotes] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [quoteBackgroundColor, setQuoteBackgroundColor] = useState('lightblue'); // Default color
+
+  const quotesHandler = async () => {
+    try {
+      const response = await fetch('https://dummyjson.com/quotes/random');
+      const data = await response.json();
+      setQuotes(data.quote);
+    } catch (error) {
+      console.log(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const captureView = async () => {
+    try {
+      const uri = await captureRef(viewShotRef, {
+        format: 'jpg',
+        quality: 0.9,
+      });
+      setCapturedImage(uri);
+    } catch (error) {
+      console.error('Error capturing view:', error);
+    }
+  };
+
+  const handleRefresh = () => {
+    setLoading(true);
+    quotesHandler();
+    setCapturedImage(null);
+
+    // Generate a random background color on refresh
+    const randomColor = `#${Math.floor(Math.random() * 16777215).toString(16)}`;
+    setQuoteBackgroundColor(randomColor);
+  };
+
+  const handleShare = async () => {
+    if (capturedImage) {
+      try {
+        await Sharing.shareAsync(capturedImage);
+      } catch (error) {
+        console.log(error);
+      }
+    }
+  };
+
+  const updateQuoteDaily = () => {
+    // Get the current time
+    const now = new Date();
+    // Set the target time for the next day at 12 AM
+    const targetTime = new Date(now);
+    targetTime.setHours(24, 0, 0, 0);
+
+    // Calculate the time difference until the next day at 12 AM
+    const timeUntilUpdate = targetTime - now;
+
+    // Schedule the quote update at the target time
+    setTimeout(() => {
+      // Update the quote
+      quotesHandler();
+      // Reschedule for the next day
+      setInterval(updateQuoteDaily, 24 * 60 * 60 * 1000);
+    }, timeUntilUpdate);
+  };
+
+  useEffect(() => {
+    // Initial quote update
+    quotesHandler();
+    // Schedule daily quote updates
+    updateQuoteDaily();
+  }, []);
+
   return (
-    <View style={styles.container}>
-      <Text>Open up App.js to start working on your app!</Text>
-      <StatusBar style="auto" />
-    </View>
+    <ImageBackground source={bgimg} style={styles.container}>
+      <StatusBar
+        barStyle="dark-content"
+        backgroundColor="transparent"
+        translucent
+      />
+      {/* Logo view styled at the top left */}
+      <View style={styles.logoContainer}>
+        <Logo />
+      </View>
+
+      <View style={styles.card}>
+        <Text style={styles.labelText}>Quote of the Day</Text>
+        <View ref={viewShotRef} style={[styles.captureView, { backgroundColor: quoteBackgroundColor }]}>
+          {loading ? (
+            <ActivityIndicator size="large" color="#0000ff" />
+          ) : (
+            <Text style={styles.quoteText}>{quotes}</Text>
+          )}
+        </View>
+      </View>
+
+      <TouchableOpacity style={styles.refreshButton} onPress={handleRefresh}>
+        <Text style={styles.buttonText}>Refresh</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity style={styles.captureButton} onPress={captureView}>
+        <Text style={styles.buttonText}>Capture View</Text>
+      </TouchableOpacity>
+
+      {capturedImage && (
+        <View style={styles.capturedImageContainer}>
+          <Image source={{ uri: capturedImage }} style={styles.capturedImage} />
+          <TouchableOpacity style={styles.shareButton} onPress={handleShare}>
+            <Text style={styles.buttonText}>Share</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+    </ImageBackground>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
     justifyContent: 'center',
+    alignItems: 'center',
+  },
+  logoContainer: {
+    position: 'absolute',
+    top: 30,
+    left: 5,
+    padding: 10,
+    zIndex: 1,
+  },
+  card: {
+    backgroundColor: '#33ccff',
+    borderRadius: 10,
+    padding: 20,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    marginBottom: 20,
+  },
+  captureView: {
+    backgroundColor: '#FFFF00',
+    padding: 20,
+    borderRadius: 10,
+    marginBottom: 20,
+    alignItems: 'center',
+  },
+  labelText: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 10,
+    color: '#333',
+  },
+  quoteText: {
+    fontSize: 18,
+    textAlign: 'center',
+    color: '#ffff',
+  },
+  refreshButton: {
+    backgroundColor: '#FF0000',
+    padding: 15,
+    borderRadius: 10,
+    margin: 10,
+  },
+  captureButton: {
+    backgroundColor: '#2196F3',
+    padding: 15,
+    borderRadius: 10,
+    marginBottom: 10,
+  },
+  buttonText: {
+    color: '#00000',
+    fontSize: 16,
+    textAlign: 'center', 
+  },
+  capturedImageContainer: { 
+    alignItems: 'center',
+  },
+  capturedImage: {
+    width: 300,
+    height: 150,
+    resizeMode: 'contain',
+    marginBottom: 10,
+  },
+  shareButton: {
+    backgroundColor: '#FFFF00',
+    padding: 15,
+    borderRadius: 10,
+    marginTop: 10,
   },
 });
+   
