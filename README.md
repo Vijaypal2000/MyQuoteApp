@@ -32,19 +32,5 @@ To get started with this project, follow these steps:
    cd react-native-quote-app
    ```
 
-2. Install dependencies:
-
-   ```bash
-   npm install
-   ```
-
-3. Run the app:
-
-   ```bash
-   npm start
-   ```
-
-   This will start the Expo development server.
-
-4. Open the app on your emulator or scan the QR code with the Expo Go app on your device.
+2. Open the app on your emulator or scan the QR code with the Expo Go app on your device.
 
